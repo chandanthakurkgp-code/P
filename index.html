@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Kharagpur Town PS - Selfie & GPS Duty</title>
+  <style>
+    :root { --primary: #002147; --success: #28a745; --danger: #d9534f; --info: #5bc0de; --dark: #343a40; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; background: #eef2f7; margin: 0; padding-bottom: 50px; }
+    
+    header { background: var(--primary); color: white; padding: 15px; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+    .date-bar { background: #fff; padding: 10px; text-align: center; font-weight: bold; border-bottom: 1px solid #ddd; color: var(--primary); }
+    
+    .container { padding: 12px; max-width: 800px; margin: auto; }
+
+    /* Admin & History Sections */
+    #admin-section, #history-section { 
+      background: white; padding: 20px; border-radius: 15px; display: none; margin-bottom: 25px; border-top: 6px solid var(--primary); box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+
+    /* Duty Cards */
+    .duty-card { background: white; border-radius: 12px; padding: 15px; margin-bottom: 15px; border-left: 8px solid var(--primary); box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+    .post-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 10px; }
+    .post-title { font-size: 18px; font-weight: bold; color: var(--primary); }
+    
+    .officer-row { background: #f8f9fa; padding: 12px; border-radius: 10px; margin-top: 10px; border: 1px solid #e1e4e8; }
+    .selfie-preview { width: 60px; height: 60px; border-radius: 8px; object-fit: cover; border: 2px solid #ddd; margin-right: 10px; }
+    .log-info { font-size: 11px; color: #666; font-style: italic; }
+
+    /* Buttons */
+    .btn { padding: 10px 15px; border-radius: 8px; border: none; cursor: pointer; font-weight: bold; display: inline-flex; align-items: center; gap: 8px; transition: 0.2s; justify-content: center; }
+    .btn:active { transform: scale(0.96); }
+    .btn-main { background: var(--primary); color: white; width: 100%; margin-bottom: 10px; }
+    .btn-checkin { background: var(--success); color: white; width: 100%; margin-top: 10px; }
+    .btn-checkout { background: var(--danger); color: white; width: 100%; margin-top: 10px; }
+    .btn-wa { background: #25D366; color: white; }
+
+    /* History Table */
+    table { width: 100%; border-collapse: collapse; font-size: 11px; margin-top: 15px; }
+    table th, table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+    table th { background: var(--primary); color: white; }
+    .hist-img { width: 40px; height: 40px; border-radius: 4px; }
+
+    .search-box { width: 100%; padding: 15px; border-radius: 30px; border: 1px solid #ccc; margin-bottom: 20px; outline: none; font-size: 16px; }
+    input[type="text"], input[type="password"] { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; }
+    .check-list { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; max-height: 150px; overflow-y: auto; background: #fff; padding: 10px; border: 1px solid #eee; margin-top: 5px; border-radius: 8px; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h2 style="margin:0">Kharagpur Town PS</h2>
+  <small>GPS & Selfie Attendance System</small>
+</header>
+
+<div class="date-bar">📅 दिनांक: <span id="current-date"></span></div>
+
+<div class="container">
+  <input type="file" id="cameraInput" accept="image/*" capture="user" style="display:none;">
+
+  <button class="btn btn-main" onclick="unlockAdmin()">⚙️ एडमिन कंट्रोल / हिस्ट्री देखें</button>
+
+  <div id="admin-section">
+    <h3 style="margin-top:0">एडमिन पैनल</h3>
+    <button class="btn btn-main" style="background:var(--info)" onclick="showHistory()">📜 पूरी ड्यूटी हिस्ट्री (Logs)</button>
+    <button class="btn btn-main" style="background:var(--success)" onclick="broadcastWA()">📲 सभी को व्हाट्सएप भेजें</button>
+    <button class="btn btn-main" style="background:var(--danger)" onclick="resetAssignments()">🧹 आज का चार्ट रिसेट करें</button>
+
+    <div style="margin-top:20px;">
+      <b>👥 ऑफिसर्स जोड़ें:</b>
+      <div id="off-admin-list" style="max-height: 120px; overflow-y: auto; border: 1px solid #eee; margin: 10px 0; padding: 5px;"></div>
+      <input type="text" id="new-off-name" placeholder="नाम">
+      <input type="text" id="new-off-phone" placeholder="व्हाट्सएप नंबर">
+      <button class="btn btn-main" style="background:var(--success)" onclick="addOfficer()">+ नया ऑफिसर जोड़ें</button>
+    </div>
+
+    <div style="margin-top:20px;">
+      <b>📍 ड्यूटी पोस्ट जोड़ें:</b>
+      <button class="btn btn-main" style="background:var(--info); font-size: 12px; padding: 5px; width: auto; float: right;" onclick="addPost()">+ नया पोस्ट</button>
+      <div style="clear:both"></div>
+      <div id="post-admin-list"></div>
+    </div>
+
+    <button class="btn btn-main" style="background:var(--primary); padding: 18px;" onclick="saveAll()">💾 सब सेव करें (Save All Data)</button>
+    <button class="btn btn-main" style="background:#6c757d" onclick="location.reload()">❌ क्लोज</button>
+  </div>
+
+  <div id="history-section">
+    <h3>📜 ड्यूटी हिस्ट्री (Selfie & GPS Log)</h3>
+    <button class="btn btn-main" style="background:var(--danger); width: auto;" onclick="clearHistory()">Clear All History</button>
+    <div style="overflow-x:auto;">
+      <table id="history-table">
+        <thead>
+          <tr>
+            <th>तारीख</th><th>ऑफिसर</th><th>पोस्ट</th><th>सेल्फी</th><th>समय/GPS</th>
+          </tr>
+        </thead>
+        <tbody id="history-body"></tbody>
+      </table>
+    </div>
+    <button class="btn btn-main" style="margin-top:15px;" onclick="document.getElementById('history-section').style.display='none'">पीछे जाएँ</button>
+  </div>
+
+  <input type="text" id="search" class="search-box" placeholder="ऑफिसर या पोस्ट खोजें..." onkeyup="filterDuty()">
+  <div id="duty-display"></div>
+</div>
+
+<script>
+  // डेटा लोडिंग
+  let officers = JSON.parse(localStorage.getItem('kp_off_list')) || [];
+  let posts = JSON.parse(localStorage.getItem('kp_post_list')) || [];
+  let assignments = JSON.parse(localStorage.getItem('kp_assigns')) || {};
+  let logs = JSON.parse(localStorage.getItem('kp_live_logs')) || {};
+  let history = JSON.parse(localStorage.getItem('kp_history')) || [];
+  const PASS = "1234";
+
+  document.getElementById('current-date').innerText = new Date().toLocaleDateString('hi-IN', {day:'2-digit', month:'long', year:'numeric'});
+
+  function unlockAdmin() {
+    if(prompt("पासवर्ड डालें:") === PASS) {
+      document.getElementById('admin-section').style.display = 'block';
+      renderAdminUI();
+    } else { alert("गलत पासवर्ड!"); }
+  }
+
+  // --- Admin Logic ---
+  function renderAdminUI() {
+    document.getElementById('off-admin-list').innerHTML = officers.map(o => `<div style="display:flex; justify-content:space-between; padding:5px; border-bottom:1px solid #eee;"><span>${o.name}</span><button onclick="delOfficer(${o.id})" style="border:none; color:red; cursor:pointer;">✖</button></div>`).join('');
+    document.getElementById('post-admin-list').innerHTML = posts.map(p => `
+      <div style="background:#f9f9f9; padding:10px; border-radius:8px; margin-bottom:10px; border:1px solid #ddd;">
+        <input type="text" id="pName-${p.id}" value="${p.name}" placeholder="पोस्ट नाम">
+        <input type="text" id="pMap-${p.id}" value="${p.map}" placeholder="Map Link">
+        <div class="check-list">
+          ${officers.map(o => `<label style="display:block; font-size:12px;"><input type="checkbox" class="chk-${p.id}" value="${o.id}" ${(assignments[p.id] || []).includes(o.id.toString()) ? 'checked' : ''}> ${o.name}</label>`).join('')}
+        </div>
+        <button class="btn btn-danger" style="background:none; color:red; border:none; margin-top:5px; cursor:pointer;" onclick="delPost('${p.id}')">Remove Post</button>
+      </div>`).join('');
+  }
+
+  function addOfficer() {
+    const n = document.getElementById('new-off-name').value;
+    const p = document.getElementById('new-off-phone').value;
+    if(n && p) { officers.push({id: Date.now(), name: n, phone: p}); renderAdminUI(); }
+  }
+  function delOfficer(id) { officers = officers.filter(o => o.id !== id); renderAdminUI(); }
+  function addPost() { posts.push({id: "p"+Date.now(), name: "नई पोस्ट", map: ""}); renderAdminUI(); }
+  function delPost(id) { posts = posts.filter(p => p.id !== id); renderAdminUI(); }
+
+  function saveAll() {
+    posts.forEach(p => {
+      p.name = document.getElementById(`pName-${p.id}`).value;
+      p.map = document.getElementById(`pMap-${p.id}`).value;
+      assignments[p.id] = Array.from(document.querySelectorAll(`.chk-${p.id}:checked`)).map(cb => cb.value);
+    });
+    localStorage.setItem('kp_off_list', JSON.stringify(officers));
+    localStorage.setItem('kp_post_list', JSON.stringify(posts));
+    localStorage.setItem('kp_assigns', JSON.stringify(assignments));
+    alert("सब कुछ सुरक्षित कर लिया गया है!");
+    location.reload();
+  }
+
+  function resetAssignments() {
+    if(confirm("क्या आज की सारी ड्यूटी साफ़ करनी है?")) {
+      localStorage.setItem('kp_assigns', JSON.stringify({}));
+      localStorage.setItem('kp_live_logs', JSON.stringify({}));
+      location.reload();
+    }
+  }
+
+  // --- Selfie & GPS & Attendance Logic ---
+  let tempDutyData = null;
+
+  function triggerRecord(offId, postId, type) {
+    tempDutyData = { offId, postId, type };
+    document.getElementById('cameraInput').click(); // सेल्फी कैमरा खोलें
+  }
+
+  document.getElementById('cameraInput').onchange = function(e) {
+    if(!e.target.files.length) return;
+    const file = e.target.files[0];
+    const reader = new FileReader();
+    reader.onload = function(event) {
+      processDuty(event.target.result); // फोटो मिलने के बाद अटेंडेंस प्रोसेस करें
+    };
+    reader.readAsDataURL(file);
+  };
+
+  function processDuty(photoBase64) {
+    if(!navigator.geolocation) return alert("GPS चालू करें!");
+    
+    const { offId, postId, type } = tempDutyData;
+    navigator.geolocation.getCurrentPosition(pos => {
+      const loc = `${pos.coords.latitude.toFixed(4)},${pos.coords.longitude.toFixed(4)}`;
+      const time = new Date().toLocaleTimeString('en-IN', {hour12:true, hour:'2-digit', minute:'2-digit'});
+      const key = `${offId}_${postId}`;
+      
+      // कंप्रेस फोटो (Storage बचाने के लिए)
+      compressImage(photoBase64, (smallPhoto) => {
+        if(type === 'IN') {
+          logs[key] = { inTime: time, inLoc: loc, inPhoto: smallPhoto };
+        } else {
+          const log = logs[key];
+          const off = officers.find(o => o.id == offId);
+          const post = posts.find(p => p.id == postId);
+          
+          history.push({
+            date: new Date().toLocaleDateString(),
+            officer: off.name,
+            post: post.name,
+            photo: smallPhoto,
+            data: `In: ${log.inTime} (${log.inLoc}) | Out: ${time} (${loc})`
+          });
+          localStorage.setItem('kp_history', JSON.stringify(history));
+          delete logs[key];
+        }
+        localStorage.setItem('kp_live_logs', JSON.stringify(logs));
+        renderDisplay();
+        alert("अटेंडेंस सुरक्षित हो गई!");
+      });
+    }, () => alert("GPS एरर!"), {enableHighAccuracy: true});
+  }
+
+  function compressImage(base64, callback) {
+    const img = new Image();
+    img.src = base64;
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      canvas.width = 150; canvas.height = 150; // छोटी फोटो
+      ctx.drawImage(img, 0, 0, 150, 150);
+      callback(canvas.toDataURL('image/jpeg', 0.6)); // लो क्वालिटी जेपेग
+    };
+  }
+
+  // --- Display Logic ---
+  function renderDisplay() {
+    const disp = document.getElementById('duty-display');
+    let html = "";
+    posts.forEach(p => {
+      const assigned = assignments[p.id] || [];
+      if(assigned.length > 0) {
+        html += `<div class="duty-card">
+          <div class="post-header"><span class="post-title">📍 ${p.name}</span>${p.map ? `<a href="${p.map}" target="_blank" class="btn btn-wa" style="background:var(--info); font-size:11px;">Map</a>`:''}</div>`;
+        assigned.forEach(oid => {
+          const o = officers.find(off => off.id == oid);
+          if(!o) return;
+          const log = logs[`${o.id}_${p.id}`];
+          html += `
+            <div class="officer-row">
+              <div style="display:flex; align-items:center;">
+                ${log ? `<img src="${log.inPhoto}" class="selfie-preview">` : `<div class="selfie-preview" style="background:#ddd; display:flex; align-items:center; justify-content:center; font-size:10px;">No Photo</div>`}
+                <div>
+                  <b>${o.name}</b><br>
+                  <span class="log-info">${log ? `✅ In: ${log.inTime} (${log.inLoc})` : '⚪ ड्यूटी शुरू नहीं हुई'}</span>
+                </div>
+              </div>
+              <div style="display:flex; gap:5px; margin-top:10px;">
+                <a href="tel:${o.phone}" class="btn" style="background:var(--primary); color:white;">📞 Call</a>
+                ${!log ? 
+                  `<button class="btn btn-checkin" style="margin-top:0" onclick="triggerRecord(${o.id}, '${p.id}', 'IN')">📸 Start Duty</button>` : 
+                  `<button class="btn btn-checkout" style="margin-top:0" onclick="triggerRecord(${o.id}, '${p.id}', 'OUT')">📸 End Duty</button>`
+                }
+              </div>
+            </div>`;
+        });
+        html += `</div>`;
+      }
+    });
+    disp.innerHTML = html || "<p style='text-align:center; padding:20px;'>आज की ड्यूटी लगाएं।</p>";
+  }
+
+  function showHistory() {
+    document.getElementById('history-section').style.display = 'block';
+    const body = document.getElementById('history-body');
+    body.innerHTML = history.slice().reverse().map(h => `
+      <tr>
+        <td>${h.date}</td>
+        <td>${h.officer}</td>
+        <td>${h.post}</td>
+        <td><img src="${h.photo}" class="hist-img" onclick="alert('Selfie Recorded')"></td>
+        <td>${h.data}</td>
+      </tr>`).join('');
+  }
+
+  function broadcastWA() {
+    posts.forEach(p => {
+      (assignments[p.id] || []).forEach(oid => {
+        const o = officers.find(off => off.id == oid);
+        if(o) window.open(`https://wa.me/91${o.phone}?text=${encodeURIComponent('जय हिन्द, आपकी ड्यूटी "'+p.name+'" पर लगी है।')}`, '_blank');
+      });
+    });
+  }
+
+  function filterDuty() {
+    const q = document.getElementById('search').value.toLowerCase();
+    const cards = document.getElementsByClassName('duty-card');
+    for (let c of cards) c.style.display = c.innerText.toLowerCase().includes(q) ? "block" : "none";
+  }
+
+  function clearHistory() { if(confirm("Delete History?")) { localStorage.removeItem('kp_history'); history = []; showHistory(); } }
+
+  renderDisplay();
+</script>
+
+</body>
+</html>
